@@ -1,3 +1,104 @@
+
 ##-----------------------------------------------------------------------------
-## Resources
+## Labels module callled that will be used for naming and tags.
 ##-----------------------------------------------------------------------------
+module "labels" {
+  source      = "terraform-az-modules/tags/azurerm"
+  version     = "1.0.2"
+  name        = var.name
+  environment = var.environment
+  managedby   = var.managedby
+  label_order = var.label_order
+  repository  = var.repository
+  extra_tags  = var.extra_tags
+}
+
+resource "azurerm_eventhub_namespace" "events" {
+  count               = var.enabled ? 1 : 0
+  name                = format("%s-event-hub", module.labels.id)
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  sku                 = var.sku
+  capacity            = var.capacity
+
+  auto_inflate_enabled     = var.auto_inflate != null ? var.auto_inflate.enabled : null
+  maximum_throughput_units = var.auto_inflate != null ? var.auto_inflate.maximum_throughput_units : null
+
+  dynamic "network_rulesets" {
+    for_each = var.network_rules != null ? ["true"] : []
+    content {
+      default_action = "Deny"
+
+      dynamic "ip_rule" {
+        for_each = var.network_rules.ip_rules
+        iterator = iprule
+        content {
+          ip_mask = iprule.value
+        }
+      }
+
+      dynamic "virtual_network_rule" {
+        for_each = var.network_rules.subnet_ids
+        iterator = subnet
+        content {
+          subnet_id = subnet.value
+        }
+      }
+    }
+  }
+
+  tags = module.labels.tags
+}
+
+resource "azurerm_eventhub_namespace_authorization_rule" "events" {
+  for_each = local.authorization_rules
+
+  name                = each.key
+  namespace_name      = azurerm_eventhub_namespace.events[0].name
+  resource_group_name = var.resource_group_name
+
+  listen = each.value.listen
+  send   = each.value.send
+  manage = each.value.manage
+}
+
+resource "azurerm_eventhub" "events" {
+  for_each = local.hubs
+
+  name                = each.key
+  namespace_name      = azurerm_eventhub_namespace.events[0].name
+  resource_group_name = var.resource_group_name
+  partition_count     = each.value.partitions
+  message_retention   = each.value.message_retention
+}
+
+resource "azurerm_eventhub_consumer_group" "events" {
+  for_each = local.consumers
+
+  name                = each.value.name
+  namespace_name      = azurerm_eventhub_namespace.events[0].name
+  eventhub_name       = each.value.hub
+  resource_group_name = var.resource_group_name
+  user_metadata       = "terraform"
+
+  depends_on = [azurerm_eventhub.events]
+}
+
+resource "azurerm_eventhub_authorization_rule" "events" {
+  for_each = local.keys
+
+  name                = each.value.key.name
+  namespace_name      = azurerm_eventhub_namespace.events[0].name
+  eventhub_name       = each.value.hub
+  resource_group_name = var.resource_group_name
+
+  listen = each.value.key.listen
+  send   = each.value.key.send
+  manage = false
+
+  depends_on = [azurerm_eventhub.events]
+}
+
+data "azurerm_monitor_diagnostic_categories" "default" {
+  resource_id = azurerm_eventhub_namespace.events[0].id
+}
