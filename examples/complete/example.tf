@@ -16,10 +16,10 @@ module "resource_group" {
   source  = "terraform-az-modules/resource-group/azurerm"
   version = "1.0.1"
 
-  name        = local.name
-  environment = local.environment
-  label_order = local.label_order
-  location    = "North Europe"
+  name                     = local.name
+  environment              = local.environment
+  label_order              = local.label_order
+  location                 = "North Europe"
   resource_position_prefix = false
 }
 
@@ -131,7 +131,7 @@ module "eventhub" {
 module "vault" {
   source                        = "terraform-az-modules/key-vault/azurerm"
   version                       = "1.0.1"
-  name                          = "core"
+  name                          = "app23"
   environment                   = "dev"
   label_order                   = ["name", "environment", "location"]
   resource_group_name           = module.resource_group.resource_group_name
