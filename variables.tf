@@ -1,13 +1,53 @@
-
-variable "name" {
+##-----------------------------------------------------------------------------
+## Naming convention
+##-----------------------------------------------------------------------------
+variable "custom_name" {
   type        = string
   default     = null
+  description = "Override default naming convention"
+}
+
+variable "resource_position_prefix" {
+  type        = bool
+  default     = true
+  description = <<EOT
+Controls the placement of the resource type keyword (e.g., "vnet", "ddospp") in the resource name.
+
+- If true, the keyword is prepended: "vnet-core-dev".
+- If false, the keyword is appended: "core-dev-vnet".
+
+This helps maintain naming consistency based on organizational preferences.
+EOT
+}
+
+##-----------------------------------------------------------------------------
+## Labels
+##-----------------------------------------------------------------------------
+variable "name" {
+  type        = string
   description = "Name  (e.g. `app` or `cluster`)."
+}
+
+variable "environment" {
+  type        = string
+  description = "Environment (e.g. `prod`, `dev`, `staging`)."
+}
+
+variable "managedby" {
+  type        = string
+  default     = "terraform-az-modules"
+  description = "ManagedBy, eg 'terraform-az-modules'."
+}
+
+variable "extra_tags" {
+  type        = map(string)
+  default     = null
+  description = "Variable to pass extra tags."
 }
 
 variable "repository" {
   type        = string
-  default     = "https://github.com/hugin/terraform-azure-vnet"
+  default     = "https://github.com/terraform-az-modules/terraform-azure-eventhub"
   description = "Terraform current module repo"
 
   validation {
@@ -17,30 +57,28 @@ variable "repository" {
   }
 }
 
-variable "environment" {
+variable "deployment_mode" {
   type        = string
-  default     = null
-  description = "Environment (e.g. `prod`, `dev`, `staging`)."
+  default     = "terraform"
+  description = "Specifies how the infrastructure/resource is deployed"
 }
 
 variable "label_order" {
   type        = list(any)
-  default     = ["name", "environment"]
-  description = "Label order, e.g. `name`,`application`."
+  default     = ["name", "environment", "location"]
+  description = "The order of labels used to construct resource names or tags. If not specified, defaults to ['name', 'environment', 'location']."
 }
 
-variable "managedby" {
+variable "location" {
+  description = "Azure location where resources should be deployed."
   type        = string
-  default     = "hello@hugin.com"
-  description = "ManagedBy, eg 'hugin'."
+  default     = ""
 }
 
-variable "extra_tags" {
-  type        = map(string)
-  default     = null
-  description = "Variable to pass extra tags."
-}
 
+##-----------------------------------------------------------------------------
+## Global Variables
+##-----------------------------------------------------------------------------
 variable "enabled" {
   type        = bool
   default     = true
@@ -49,15 +87,18 @@ variable "enabled" {
 
 variable "resource_group_name" {
   description = "Name of resource group to deploy resources in."
+  type        = string
+  default     = ""
 }
 
-variable "location" {
-  description = "Azure location where resources should be deployed."
-}
 
+##------------------------------------------------------------------------------
+# Resource Variables
+##------------------------------------------------------------------------------
 variable "sku" {
   description = "Defines which tier to use. Valid options are Basic and Standard."
   default     = "Standard"
+  type        = string
 }
 
 variable "capacity" {
@@ -71,17 +112,6 @@ variable "auto_inflate" {
   type = object({
     enabled                  = bool
     maximum_throughput_units = number
-  })
-  default = null
-}
-
-variable "diagnostics" {
-  description = "Diagnostic settings for those resources that support it. See README.md for details on configuration."
-  type = object({
-    destination   = string
-    eventhub_name = string
-    logs          = list(string)
-    metrics       = list(string)
   })
   default = null
 }
@@ -120,10 +150,4 @@ variable "hubs" {
     }))
   }))
   default = []
-}
-
-variable "tags" {
-  description = "Tags to apply to all resources created."
-  type        = map(string)
-  default     = {}
 }

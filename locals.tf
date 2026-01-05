@@ -2,6 +2,7 @@
 ## Locals
 ##-----------------------------------------------------------------------------
 locals {
+  name = var.custom_name != null ? var.custom_name : module.labels.id
   consumers = { for hc in flatten([for h in var.hubs :
     [for c in h.consumers : {
       hub  = h.name
@@ -17,18 +18,4 @@ locals {
   hubs                = { for h in var.hubs : h.name => h }
   authorization_rules = { for a in var.authorization_rules : a.name => a }
 
-  diag_resource_list = var.diagnostics != null ? split("/", var.diagnostics.destination) : []
-  parsed_diag = var.diagnostics != null ? {
-    log_analytics_id   = contains(local.diag_resource_list, "Microsoft.OperationalInsights") ? var.diagnostics.destination : null
-    storage_account_id = contains(local.diag_resource_list, "Microsoft.Storage") ? var.diagnostics.destination : null
-    event_hub_auth_id  = contains(local.diag_resource_list, "Microsoft.EventHub") ? var.diagnostics.destination : null
-    metric             = var.diagnostics.metrics
-    log                = var.diagnostics.logs
-    } : {
-    log_analytics_id   = null
-    storage_account_id = null
-    event_hub_auth_id  = null
-    metric             = []
-    log                = []
-  }
 }

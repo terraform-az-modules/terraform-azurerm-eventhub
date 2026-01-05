@@ -5,17 +5,19 @@
 module "labels" {
   source      = "terraform-az-modules/tags/azurerm"
   version     = "1.0.2"
-  name        = var.name
+  name            = var.custom_name == null ? var.name : var.custom_name
   environment = var.environment
+    location        = var.location
   managedby   = var.managedby
   label_order = var.label_order
   repository  = var.repository
+    deployment_mode = var.deployment_mode
   extra_tags  = var.extra_tags
 }
 
 resource "azurerm_eventhub_namespace" "events" {
   count               = var.enabled ? 1 : 0
-  name                = format("%s-event-hub", module.labels.id)
+  name                = format(var.resource_position_prefix ? "event-hub-%s" : "%s-event-hub", local.name)
   location            = var.location
   resource_group_name = var.resource_group_name
   sku                 = var.sku
@@ -65,11 +67,10 @@ resource "azurerm_eventhub_namespace_authorization_rule" "events" {
 resource "azurerm_eventhub" "events" {
   for_each = local.hubs
 
-  name                = each.key
-  namespace_name      = azurerm_eventhub_namespace.events[0].name
-  resource_group_name = var.resource_group_name
-  partition_count     = each.value.partitions
-  message_retention   = each.value.message_retention
+  name              = each.key
+  namespace_id      = azurerm_eventhub_namespace.events[0].id
+  partition_count   = each.value.partitions
+  message_retention = each.value.message_retention
 }
 
 resource "azurerm_eventhub_consumer_group" "events" {
@@ -97,8 +98,4 @@ resource "azurerm_eventhub_authorization_rule" "events" {
   manage = false
 
   depends_on = [azurerm_eventhub.events]
-}
-
-data "azurerm_monitor_diagnostic_categories" "default" {
-  resource_id = azurerm_eventhub_namespace.events[0].id
 }

@@ -20,6 +20,7 @@ module "resource_group" {
   environment = local.environment
   label_order = local.label_order
   location    = "North Europe"
+  resource_position_prefix = false
 }
 
 
@@ -75,45 +76,46 @@ data "azurerm_eventhub_namespace_authorization_rule" "default" {
 # Log Analytics
 # ------------------------------------------------------------------------------
 module "log-analytics" {
-  source                         = "terraform-az-modules/log-analytics/azurerm"
-  version                        = "1.0.2"
-  name                           = "core"
-  environment                    = "dev"
-  label_order                    = ["name", "environment", "location"]
-  log_analytics_workspace_sku    = "PerGB2018"
-  resource_group_name            = module.resource_group.resource_group_name
-  location                       = module.resource_group.resource_group_location
-  log_analytics_workspace_id     = module.log-analytics.workspace_id
+  source                      = "terraform-az-modules/log-analytics/azurerm"
+  version                     = "1.0.2"
+  name                        = "core"
+  environment                 = "dev"
+  label_order                 = ["name", "environment", "location"]
+  log_analytics_workspace_sku = "PerGB2018"
+  resource_group_name         = module.resource_group.resource_group_name
+  location                    = module.resource_group.resource_group_location
+  log_analytics_workspace_id  = module.log-analytics.workspace_id
 }
 
 module "eventhub" {
   source              = "../../"
-  name                = "test"
+  name                = local.name
+  label_order         = local.label_order
+  environment         = local.environment
   resource_group_name = module.resource_group.resource_group_name
   location            = module.resource_group.resource_group_location
-  environment         = local.environment
   sku                 = "Standard"
   capacity            = 1
-  # authorization_rules = [
-  #   {
-  #     name   = "vpn-diagnostics-send"
-  #     send   = true
-  #     listen = true
-  #     manage = true
-  #   }
-  # ]
+  authorization_rules = [
+    {
+      name   = "app-diagnostics-send"
+      send   = true
+      listen = true
+      manage = true
+    }
+  ]
 
   hubs = [
     {
-      name              = "postgres-dev-logs"
+      name              = "app-test-logs"
       partitions        = 8
       message_retention = 1
       consumers = [
-        "signoz",
+        "app-group",
       ]
       keys = [
         {
-          name   = "signoz"
+          name   = "app-key"
           listen = true
           send   = false
         },
@@ -143,8 +145,8 @@ module "vault" {
     default_action = "Deny"
     ip_rules       = ["0.0.0.0/0"]
   }
-  diagnostic_setting_enable  = true
-  eventhub_name = module.eventhub.eventhub_name["postgres-dev-logs"]
+  diagnostic_setting_enable      = true
+  eventhub_name                  = module.eventhub.eventhub_name["app-test-logs"]
   eventhub_authorization_rule_id = data.azurerm_eventhub_namespace_authorization_rule.default.id
-  log_analytics_workspace_id = module.log-analytics.workspace_id
+  log_analytics_workspace_id     = module.log-analytics.workspace_id
 }
