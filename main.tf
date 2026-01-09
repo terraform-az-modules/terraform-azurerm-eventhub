@@ -3,19 +3,19 @@
 ## Labels module callled that will be used for naming and tags.
 ##-----------------------------------------------------------------------------
 module "labels" {
-  source      = "terraform-az-modules/tags/azurerm"
-  version     = "1.0.2"
+  source          = "terraform-az-modules/tags/azurerm"
+  version         = "1.0.2"
   name            = var.custom_name == null ? var.name : var.custom_name
-  environment = var.environment
-    location        = var.location
-  managedby   = var.managedby
-  label_order = var.label_order
-  repository  = var.repository
-    deployment_mode = var.deployment_mode
-  extra_tags  = var.extra_tags
+  environment     = var.environment
+  location        = var.location
+  managedby       = var.managedby
+  label_order     = var.label_order
+  repository      = var.repository
+  deployment_mode = var.deployment_mode
+  extra_tags      = var.extra_tags
 }
 
-resource "azurerm_eventhub_namespace" "events" {
+resource "azurerm_eventhub_namespace" "eventhub_ns" {
   count               = var.enabled ? 1 : 0
   name                = format(var.resource_position_prefix ? "event-hub-%s" : "%s-event-hub", local.name)
   location            = var.location
@@ -32,7 +32,7 @@ resource "azurerm_eventhub_namespace" "events" {
       default_action = "Deny"
 
       dynamic "ip_rule" {
-        for_each = var.network_rules.ip_rules
+        for_each = var.network_rules != null ? var.network_rules.ip_rules : []
         iterator = iprule
         content {
           ip_mask = iprule.value
@@ -40,7 +40,7 @@ resource "azurerm_eventhub_namespace" "events" {
       }
 
       dynamic "virtual_network_rule" {
-        for_each = var.network_rules.subnet_ids
+        for_each = var.network_rules != null ? var.network_rules.subnet_ids : []
         iterator = subnet
         content {
           subnet_id = subnet.value
@@ -52,11 +52,11 @@ resource "azurerm_eventhub_namespace" "events" {
   tags = module.labels.tags
 }
 
-resource "azurerm_eventhub_namespace_authorization_rule" "events" {
-  for_each = local.authorization_rules
+resource "azurerm_eventhub_namespace_authorization_rule" "eventhub_nar" {
+  for_each = var.enabled ? local.authorization_rules : {}
 
   name                = each.key
-  namespace_name      = azurerm_eventhub_namespace.events[0].name
+  namespace_name      = azurerm_eventhub_namespace.eventhub_ns[0].name
   resource_group_name = var.resource_group_name
 
   listen = each.value.listen
@@ -64,32 +64,32 @@ resource "azurerm_eventhub_namespace_authorization_rule" "events" {
   manage = each.value.manage
 }
 
-resource "azurerm_eventhub" "events" {
-  for_each = local.hubs
+resource "azurerm_eventhub" "eventhub" {
+  for_each = var.enabled ? local.hubs : {}
 
   name              = each.key
-  namespace_id      = azurerm_eventhub_namespace.events[0].id
+  namespace_id      = azurerm_eventhub_namespace.eventhub_ns[0].id
   partition_count   = each.value.partitions
   message_retention = each.value.message_retention
 }
 
-resource "azurerm_eventhub_consumer_group" "events" {
-  for_each = local.consumers
+resource "azurerm_eventhub_consumer_group" "eventhub_cg" {
+  for_each = var.enabled && var.enable_consumer_group ? local.consumers : {}
 
   name                = each.value.name
-  namespace_name      = azurerm_eventhub_namespace.events[0].name
+  namespace_name      = azurerm_eventhub_namespace.eventhub_ns[0].name
   eventhub_name       = each.value.hub
   resource_group_name = var.resource_group_name
   user_metadata       = "terraform"
 
-  depends_on = [azurerm_eventhub.events]
+  depends_on = [azurerm_eventhub.eventhub]
 }
 
-resource "azurerm_eventhub_authorization_rule" "events" {
-  for_each = local.keys
+resource "azurerm_eventhub_authorization_rule" "eventhub_ar" {
+  for_each = var.enabled && var.enable_authorization_rule ? local.keys : {}
 
   name                = each.value.key.name
-  namespace_name      = azurerm_eventhub_namespace.events[0].name
+  namespace_name      = azurerm_eventhub_namespace.eventhub_ns[0].name
   eventhub_name       = each.value.hub
   resource_group_name = var.resource_group_name
 
@@ -97,5 +97,5 @@ resource "azurerm_eventhub_authorization_rule" "events" {
   send   = each.value.key.send
   manage = false
 
-  depends_on = [azurerm_eventhub.events]
+  depends_on = [azurerm_eventhub.eventhub]
 }

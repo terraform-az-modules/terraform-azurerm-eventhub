@@ -1,5 +1,6 @@
 provider "azurerm" {
   features {}
+  subscription_id = "1ac2caa4-336e-4daa-b8f1-0fbabe2d4b11"
 }
 
 locals {
@@ -14,7 +15,7 @@ locals {
 ##-----------------------------------------------------------------------------
 module "resource_group" {
   source  = "terraform-az-modules/resource-group/azurerm"
-  version = "1.0.1"
+  version = "1.0.3"
 
   name                     = local.name
   environment              = local.environment
@@ -84,7 +85,6 @@ module "log-analytics" {
   log_analytics_workspace_sku = "PerGB2018"
   resource_group_name         = module.resource_group.resource_group_name
   location                    = module.resource_group.resource_group_location
-  log_analytics_workspace_id  = module.log-analytics.workspace_id
 }
 
 module "eventhub" {
@@ -104,7 +104,8 @@ module "eventhub" {
       manage = true
     }
   ]
-
+  enable_consumer_group     = true
+  enable_authorization_rule = true
   hubs = [
     {
       name              = "app-test-logs"
@@ -130,7 +131,7 @@ module "eventhub" {
 # ------------------------------------------------------------------------------
 module "vault" {
   source                        = "terraform-az-modules/key-vault/azurerm"
-  version                       = "1.0.1"
+  version                       = "1.0.3"
   name                          = "app23"
   environment                   = "dev"
   label_order                   = ["name", "environment", "location"]

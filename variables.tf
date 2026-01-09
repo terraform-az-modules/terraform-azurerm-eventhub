@@ -151,3 +151,15 @@ variable "hubs" {
   }))
   default = []
 }
+
+variable "enable_authorization_rule" {
+  description = "Flag to control attaching Authorization Rule within a Eventhub."
+  type        = bool
+  default     = false
+}
+
+variable "enable_consumer_group" {
+  description = "Flag to control attaching Consumer Groups within an Event Hub."
+  type        = bool
+  default     = false
+}
