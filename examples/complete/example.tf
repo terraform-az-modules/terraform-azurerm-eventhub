@@ -144,7 +144,7 @@ module "vault" {
   network_acls = {
     bypass         = "AzureServices"
     default_action = "Deny"
-    ip_rules       = ["0.0.0.0/0"]
+    ip_rules       = []
   }
   diagnostic_setting_enable      = true
   eventhub_name                  = module.eventhub.eventhub_name["app-test-logs"]
