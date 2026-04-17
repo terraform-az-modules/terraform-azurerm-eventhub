@@ -130,7 +130,7 @@ module "eventhub" {
 # ------------------------------------------------------------------------------
 module "vault" {
   source                        = "terraform-az-modules/key-vault/azurerm"
-  version                       = "2.1.0"
+  version                       = "2.3.0"
   name                          = "app23"
   environment                   = "dev"
   label_order                   = ["name", "environment", "location"]
