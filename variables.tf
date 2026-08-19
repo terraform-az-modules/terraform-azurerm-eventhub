@@ -163,3 +163,25 @@ variable "enable_consumer_group" {
   type        = bool
   default     = false
 }
+
+##-----------------------------------------------------------------------------
+## Private Endpoint Variables
+##-----------------------------------------------------------------------------
+variable "subnet_id" {
+  type        = string
+  default     = ""
+  description = "The resource ID of the subnet"
+}
+
+
+variable "enable_private_endpoint" {
+  type        = bool
+  default     = false
+  description = "enable or disable private endpoint to eventhub namespace"
+}
+
+variable "private_dns_zone_ids" {
+  description = "The IDs of a private DNS zone."
+  type        = string
+  default     = null
+}

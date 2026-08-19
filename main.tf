@@ -99,3 +99,34 @@ resource "azurerm_eventhub_authorization_rule" "eventhub_ar" {
 
   depends_on = [azurerm_eventhub.eventhub]
 }
+
+
+##-----------------------------------------------------------------------------
+## Private Endpoint - Create private endpoint for event hub namespace.
+##-----------------------------------------------------------------------------
+resource "azurerm_private_endpoint" "pep" {
+  count               = var.enabled && var.enable_private_endpoint ? 1 : 0
+  name                = var.resource_position_prefix ? format("pe-%s", azurerm_eventhub_namespace.eventhub_ns[0].name) : format("%s-pe", azurerm_eventhub_namespace.eventhub_ns[0].name)
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  subnet_id           = var.subnet_id
+  tags                = module.labels.tags
+
+  private_dns_zone_group {
+    name                 = var.resource_position_prefix ? format("pdz-%s", local.name) : format("%s-pdz", local.name)
+    private_dns_zone_ids = [var.private_dns_zone_ids]
+  }
+
+  private_service_connection {
+    name                           = var.resource_position_prefix ? format("psc-%s", local.name) : format("%s-psc", local.name)
+    is_manual_connection           = false
+    private_connection_resource_id = azurerm_eventhub_namespace.eventhub_ns[0].id
+    subresource_names              = ["namespace"]
+  }
+
+  lifecycle {
+    ignore_changes = [
+      tags,
+    ]
+  }
+}
