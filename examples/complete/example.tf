@@ -77,7 +77,7 @@ data "azurerm_eventhub_namespace_authorization_rule" "default" {
 # ------------------------------------------------------------------------------
 module "log-analytics" {
   source                      = "terraform-az-modules/log-analytics/azurerm"
-  version                     = "2.0.0"
+  version                     = "2.1.0"
   name                        = "core"
   environment                 = "dev"
   label_order                 = ["name", "environment", "location"]
